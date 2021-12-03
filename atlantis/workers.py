@@ -1,6 +1,6 @@
 from abc import abstractmethod, ABC
 from math import ceil
-from typing import Collection, Dict, List
+from typing import Collection, Dict
 
 from .pearls import Pearl, PearlColor, PearlLayer
 
@@ -11,7 +11,7 @@ WorkerId = int
 class Worker(ABC):
     def __init__(self, id: WorkerId, pearls: Collection[Pearl] = None):
         self.id = id
-        self.pearls: Dict[int, Pearl] = {p.id: p for p in pearls} if pearls else {}
+        self.pearls = pearls
 
     def __str__(self):
         return f"{self.__class__.__name__}: {self.id}, Pearls: {len(self.pearls)}"
@@ -20,9 +20,6 @@ class Worker(ABC):
     @abstractmethod
     def processing_rate(self) -> Dict[PearlColor, int]:
         pass
-
-    def pending_pearls(self) -> List[Pearl]:
-        return [p for p in self.pearls.values() if not p.digested]
 
     def cost_layer(self, pearl_layer: PearlLayer) -> int:
         processing_cost = ceil(

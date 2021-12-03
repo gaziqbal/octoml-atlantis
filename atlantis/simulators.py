@@ -2,7 +2,7 @@ import heapq
 import logging
 
 from math import inf
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 
 from abc import abstractmethod, ABC
 from typing import Collection, Dict, Set, List, Tuple
@@ -29,12 +29,13 @@ class TestSimulator(Simulator):
     """
 
     def step(self, world: World) -> Collection[Command]:
-        gatekeeper = world.workers[0]
-        pending_pearls = gatekeeper.pending_pearls()
-        if pending_pearls:
-            cmd = NomCommand(gatekeeper.id, pending_pearls[0].id)
-            return [cmd]
-        return []
+        cmds: Dict[WorkerId, Command] = {}
+        for p in world.pearls.values():
+            if p.digested:
+                continue
+            worker = world.pearl_workers[p]
+            cmds[worker.id] = NomCommand(worker.id, p.id)
+        return cmds.values()
 
 
 class AtlantisSimulator(Simulator):
@@ -58,21 +59,23 @@ class AtlantisSimulator(Simulator):
         self.execution_plans: Dict[PearlId, List[Command]] = {}
         # maps a worker id to the number of pending commands
         self.worker_costs: Dict[WorkerId, int] = defaultdict(int)
+        # constant time penalties to worker processing costs
+        self.worker_penalties: Dict[WorkerId, int] = defaultdict(int)
 
     def step(self, world: World) -> Collection[Command]:
 
-        pearls_with_workers = self.get_ordered_pearls_with_workers(world)
+        pearl_workers = world.get_pearls_with_workers()
         self.logger.debug(
-            f"step: {len(pearls_with_workers)} pearls, {len(self.execution_plans)} execution plans"
+            f"step: {len(pearl_workers)} pearls, {len(self.execution_plans)} execution plans"
         )
-        for i, p in enumerate(pearls_with_workers.items()):
-            self.logger.debug(f"step: {i} Pearl: {p[0]}, Worker: {p[1]}")
+        for i, item in enumerate(pearl_workers.items()):
+            self.logger.debug(f"step: {i} Pearl: {item[0]}, Worker: {item[1]}")
 
         # Build proposed commands for each worker based on state of their execution plans
         proposed_cmds: Dict[WorkerId, List[Tuple(int, PearlId, Command)]] = defaultdict(
             list
         )
-        for pearl, worker in pearls_with_workers.items():
+        for pearl, worker in pearl_workers.items():
             # Get or create the execution plan
             plan = self.execution_plans.get(pearl.id, None)
             if plan is None:
@@ -90,8 +93,16 @@ class AtlantisSimulator(Simulator):
 
             # Generate command priority
             priority = pearl.remaining_thickness
-            if cmd is NomCommand:
-                priority = priority * 2
+            # if cmd is NomCommand:
+            #     priority = priority * 2
+
+            # if pearl.digested:
+            #     priority = 0
+            # else:
+            #     priority = 1.0 / pearl.remaining_thickness
+            # if cmd is NomCommand:
+            #     priority += 1
+
             worker_cmds = proposed_cmds[cmd.worker_id]
             heapq.heappush(worker_cmds, (priority, pearl.id, cmd))
 
@@ -122,21 +133,6 @@ class AtlantisSimulator(Simulator):
             self.worker_costs[worker_id] = max(0, self.worker_costs[worker_id] - 1)
 
         return selected_cmds.values()
-
-    def get_ordered_pearls_with_workers(self, world):
-        """
-        Return pearls in order
-        """
-        ordered_pearls: Tuple[int, int, Pearl, Worker] = []
-        for w in world.workers.values():
-            for p in w.pearls.values():
-                ordered_pearls.append((p.remaining_thickness, p.id, p, w))
-        heapq.heapify(ordered_pearls)
-
-        ordered_pearls_with_workers: Dict[Pearl, Worker] = OrderedDict()
-        for o in ordered_pearls:
-            ordered_pearls_with_workers[o[2]] = o[3]
-        return ordered_pearls_with_workers
 
     def create_execution_plan(
         self, pearl: Pearl, worker: Worker, world: World
@@ -200,7 +196,7 @@ class AtlantisSimulator(Simulator):
             if move_cost >= best_cost:
                 continue
 
-            neighbors = world.neighbors[worker]
+            neighbors = world.worker_neighbors[worker]
             move_cost = move_cost + 1
 
             for n in neighbors:
@@ -256,7 +252,7 @@ class AtlantisSimulator(Simulator):
                     break
 
                 worker = world.workers[worker_id]
-                neighbors = world.neighbors[worker]
+                neighbors = world.worker_neighbors[worker]
                 for n in neighbors:
                     if n.id in visited:
                         continue

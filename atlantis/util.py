@@ -9,8 +9,8 @@ def render_world(world: World, path: str):
         label = f"{w.id} - {type(w).__name__}"
         if w.pearls:
             label += "\n"
-            label += "\n".join([str(p) for p in w.pearls.values()])
+            label += "\n".join([str(p) for p in w.pearls])
         g.add_node(pydot.Node(w.id, label=label, shape="oval"))
-    for edge in world.neighbor_map:
+    for edge in world.worker_neighbor_map:
         g.add_edge(pydot.Edge(edge[0], edge[1]))
     g.write(path, format="png")
