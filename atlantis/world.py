@@ -7,6 +7,11 @@ from .workers import Worker, GeneralWorker, MatrixWorker, VectorWorker, WorkerId
 
 
 class World:
+    """
+    Represents the current state of the world
+    This includes the workers, their layout/configuration and the pearls in play
+    """
+
     def __init__(
         self,
         workers: Dict[WorkerId, Worker],
@@ -17,16 +22,6 @@ class World:
         self.score = score
         self.neighbor_map = neighbor_map
 
-        # neighbors: Dict[WorkerId, Set[WorkerId]] = defaultdict(set)
-        # for worker_id, neighbor_id in neighbor_map:
-        #     neighbors[worker_id].add(neighbor_id)
-        #     neighbors[neighbor_id].add(worker_id)
-
-        # # build a sorted neighbor list for each worker
-        # self.neighbors = OrderedDict(
-        #     {w_id: sorted(neighbor_ids) for w_id, neighbor_ids in neighbors.items()}
-        # )
-
         worker_neighbors: Dict[Worker, Set[Worker]] = defaultdict(set)
         for worker_id, neighbor_worker_id in neighbor_map:
             worker = workers[worker_id]
@@ -34,7 +29,8 @@ class World:
             worker_neighbors[worker].add(neighbor)
             worker_neighbors[neighbor].add(worker)
 
-        # build a sorted neighbour list for each worker
+        # build a sorted list of neighbors for each worker
+        # the intent is to ensure that we iterate deterministically
         self.neighbors = OrderedDict(
             {
                 w: sorted(neighbors, key=attrgetter("id"))
@@ -44,6 +40,9 @@ class World:
 
     @classmethod
     def create_from(cls, json: Dict) -> "World":
+        """
+        Create the world from the provided json payload
+        """
         # for each worker, get the flavor, create the appropriate type, then for each pearl, create the layer
         workers: Dict[int, Worker] = OrderedDict()
         for worker in json["workers"]:
