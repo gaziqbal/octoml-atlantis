@@ -68,50 +68,60 @@ class AtlantisSimulator(Simulator):
         for i, p in enumerate(pearls_with_workers.items()):
             self.logger.debug(f"step: {i} Pearl: {p[0]}, Worker: {p[1]}")
 
-        cmds: Dict[int, Command] = {}
-
+        # Build proposed commands for each worker based on state of their execution plans
+        proposed_cmds: Dict[WorkerId, List[Tuple(int, PearlId, Command)]] = defaultdict(
+            list
+        )
         for pearl, worker in pearls_with_workers.items():
-
             # Get or create the execution plan
             plan = self.execution_plans.get(pearl.id, None)
             if plan is None:
                 plan = self.create_execution_plan(pearl, worker, world)
                 # Book worker costs
-                for command in plan:
-                    self.worker_costs[command.worker_id] += 1
+                for cmd in plan:
+                    self.worker_costs[cmd.worker_id] += 1
                 self.logger.debug(
                     f"create_execution_plan: Worker costs {self.worker_costs}"
                 )
                 self.execution_plans[pearl.id] = plan
 
             plan = self.execution_plans[pearl.id]
-            command = plan[0]
+            cmd = plan[0]
 
-            # Execute this command if the worker hasn't already been booked
-            if command.worker_id in cmds:
-                self.logger.debug(
-                    f"step: Pearl: {pearl}, Worker: {command.worker_id}: skip: {command.to_json()}"
-                )
-                continue
+            # Generate command priority
+            priority = pearl.remaining_thickness
+            if cmd is NomCommand:
+                priority = priority * 2
+            worker_cmds = proposed_cmds[cmd.worker_id]
+            heapq.heappush(worker_cmds, (priority, pearl.id, cmd))
 
-            cmds[command.worker_id] = command
-
-            # Pop the command the subtract its cost from the worker
-            self.worker_costs[command.worker_id] = max(
-                0, self.worker_costs[command.worker_id] - 1
+            self.logger.debug(
+                f"step: Pearl: {pearl}, Worker: {cmd.worker_id}, proposed: {cmd.to_json()}, priority: {priority}"
             )
+
+        # Select top commands for each worker
+        selected_cmds: Dict[WorkerId, Command] = dict()
+        for worker_id, worker_cmds in proposed_cmds.items():
+            (priority, pearl_id, cmd) = heapq.heappop(worker_cmds)
+            selected_cmds[worker_id] = cmd
+
+            plan = self.execution_plans[pearl_id]
             plan.pop(0)
 
             self.logger.debug(
-                f"step: Pearl: {pearl}, Worker: {command.worker_id}, execute: {command.to_json()}, remaining cost: {self.worker_costs[command.worker_id]}, remaining steps: {len(plan)}"
+                f"step: Pearl: {pearl_id}, Worker: {cmd.worker_id}, selected: {cmd.to_json()}, remaining cost: {self.worker_costs[cmd.worker_id]}, remaining steps: {len(plan)}"
             )
 
             # Pop the plan if there there are no more steps remaining
             if not plan:
-                self.execution_plans.pop(pearl.id)
-                self.logger.debug(f"step: Pearl: {pearl}, execution plan completed")
+                self.execution_plans.pop(pearl_id)
+                self.logger.debug(f"step: Pearl: {pearl_id}, execution plan completed")
 
-        return cmds.values()
+        # For each dispatched command, substract it's cost from the woker
+        for worker_id in selected_cmds.keys():
+            self.worker_costs[worker_id] = max(0, self.worker_costs[worker_id] - 1)
+
+        return selected_cmds.values()
 
     def get_ordered_pearls_with_workers(self, world):
         """
