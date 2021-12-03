@@ -5,7 +5,18 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Atlantis: Fixtures",
+			"name": "Python: Current File",
+			"type": "python",
+			"request": "launch",
+			"program": "${file}",
+			"cwd": "${workspaceFolder}",
+			"console": "integratedTerminal",
+			"env": {
+				"PYTHONPATH": "${workspaceFolder}"
+			},			
+		},
+		{
+			"name": "Python: Atlantis - Fixtures",
 			"type": "python",
 			"request": "launch",
 			"program": "tests/fixtures.py",
@@ -13,10 +24,10 @@
 			"console": "integratedTerminal",
 			"env": {
 				"PYTHONPATH": "${workspaceFolder}"
-			  },
+			},
 			"args": [
-				"--render-sim"
-			]	
+				"--enable-render"
+			]
 		}
 	]
 }
