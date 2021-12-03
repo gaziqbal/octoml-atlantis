@@ -9,7 +9,7 @@ from atlantis.world import World
 
 """
 .\bin\atlantis.windows.exe single-run -n 20 -s 0 -- python atlantis.py --log-level DEBUG --enable-render
-.\bin\atlantis.windows.exe average-run -- python atlantis.py
+.\bin\atlantis.windows.exe average-run -- python atlantis.py --log-level WARNING
 """
 
 

@@ -30,7 +30,7 @@ class Config:
         os.makedirs(base_dir, exist_ok=True)
 
         logging.basicConfig(
-            level=logging.DEBUG,
+            level=args.log_level,
             format="[%(asctime)s] %(levelname)s: [%(name)s]: %(message)s",
             datefmt="%H:%M:%S",
             handlers=[
