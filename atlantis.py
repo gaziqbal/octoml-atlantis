@@ -12,11 +12,9 @@ from atlantis.world import World
 .\bin\atlantis.windows.exe average-run -- python atlantis.py --log-level WARNING
 """
 
-
 if __name__ == "__main__":
-
     """
-    This script is the entry point for the Atlantis pearl processing simulator
+    Entry point for the Atlantis pearl processing simulator
     """
 
     config = Config.initialize()

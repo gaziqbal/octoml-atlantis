@@ -1,9 +1,9 @@
-import pydot
-
 from .world import World
 
 # Render the world as a png - Used for debugging
 def render_world(world: World, path: str):
+    import pydot
+
     g = pydot.Dot("Atlantis", graph_type="graph")
     for w in world.workers.values():
         label = f"{w.id} - {type(w).__name__}"

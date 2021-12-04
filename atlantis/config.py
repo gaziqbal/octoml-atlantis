@@ -26,6 +26,7 @@ class Config:
 
         args = parser.parse_args()
 
+        # Ensure output path
         base_dir = os.path.abspath(os.path.dirname(f"./{args.output_path}/"))
         os.makedirs(base_dir, exist_ok=True)
 

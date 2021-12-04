@@ -14,6 +14,8 @@ The following command line arguments can be used for atlantis.py
 	- You will need the pydot package installed (as per the requirements.txt) 
 	- You will also need to have the the [GraphVis](https://www.graphviz.org/) package installed locally.
 
+The average score is 14.5 at the moment.
+
 ## Architecture
 
 The **key concepts** are as follows
@@ -23,22 +25,16 @@ The **key concepts** are as follows
 	- **GeneralWorker**, **VectorWorker** and **MatrixWorker** are subclasses.
 - **World** maintains workers and their layout.
 - **Simulator** provides a step() method which creates a set of commands based on the state of the World.
+	- This where the heavy lifting occurs
 - The harness in **atlantis.py** creates the world from stdin, asks the simulator to generate the commands and emits them to stdout
 
-The heavy lifting happens in the simulator.
+## Algorithm
+There were two approaches examined. The first one was to have a stateless algorithm which determineed next best step for each pearl based on current state of the simulation. This felt promising would be debug-friendly, the work being done was feeling redundant and my initial implementation got more complicated then I was happy with.
 
-the economic engine will build costed routes for each pearl from each worker to its neighbours
-this will be built via a depth first search which will examine each worker's capabilities and link it to its neighbours
-during runtime, the engine will also be aware of the existing workloads for each worker and add that into the cost consideration before deciding what to do
-the work distribution algorithm takes the following into account
-- for a given pearl, examine its outermost layer and then find which neighbour will take the least steps to process it
-abstractions
-dispatching logic should be in the economic engine
-which should be abstractable
-
+The approach I landed on was to create execution plans at two instances - when the pearl is first seen, and when the pearl is fully digested. These execution plans are then dispatched at each step of the simulation. There is some prioritization necessary to handle conflicting commands for workers. The strategy is shared in the simulator notes.
 
 ## Tests
-There are some very simple tests in the /tests folder. 
+There are some simple tests in the /tests folder. 
 Given my own time constraints, most of the development occured via the test enviromment provided by the fixtures.py file. These were used to verify the path finding algorithm as well as general diagnosis for when things went wrong.
 It would very reasonable to promote these to be integration tests given that the work assignment algorithsm are deterministic.
 It would also be very reasonable to create a few unit tests for path finding and pearl prioritization.
